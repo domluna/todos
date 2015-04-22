@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -39,9 +40,9 @@ func usage() {
 
 // flags
 var (
-	path    = flag.String("path", "", "path of the todo")
-	desc    = flag.String("desc", "", "description of the todo")
-	longOut = flag.Bool("long", false, "list output will be more detailed")
+	todoPath = flag.String("path", "", "path of the todo")
+	desc     = flag.String("desc", "", "description of the todo")
+	longOut  = flag.Bool("long", false, "list output will be more detailed")
 )
 
 var todosFile = os.ExpandEnv("$HOME/.todos")
@@ -149,9 +150,8 @@ func (ts todoSlice) do(name string) error {
 
 // tag represents a TODO tag in a file.
 type tag struct {
-	lineNum  int
-	desc     string
-	filename string
+	lineNum int
+	desc    string
 }
 
 // tags looks at files in the current directory for "TODO"
@@ -171,10 +171,46 @@ type tag struct {
 //  3. end of comment block
 //
 // This does NOT check for files recursively.
-func (ts todoSlice) tags() {
+func tags() error {
+	dir, _ := os.Getwd()
+	fmt.Printf("Searching for tags ...\n\n")
+	return filepath.Walk(dir, func(fpath string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if fi.IsDir() && path.Base(dir) != fi.Name() {
+			return filepath.SkipDir
+		}
+
+		if strings.HasPrefix(fi.Name(), ".") || fi.IsDir() {
+			return nil
+		}
+
+		f, err := os.Open(fpath)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		tags, err := findTags(f)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("*** %s ***\n\n", fi.Name())
+		s := ""
+		for _, t := range tags {
+			s += fmt.Sprintf("line: %d\n", t.lineNum)
+			s += fmt.Sprintf("%s\n", t.desc)
+			s += "\n"
+		}
+		fmt.Print(s)
+		return nil
+	})
 }
 
-func reportFile(filename string, r io.Reader) ([]*tag, error) {
+func findTags(r io.Reader) ([]*tag, error) {
 	scanner := bufio.NewScanner(r)
 
 	var tags []*tag
@@ -192,9 +228,8 @@ func reportFile(filename string, r io.Reader) ([]*tag, error) {
 				// start writing todo
 				if idx != -1 {
 					tt = &tag{
-						lineNum:  lineNum,
-						desc:     line[idx:],
-						filename: filename,
+						lineNum: lineNum,
+						desc:    line[idx:],
 					}
 				}
 			} else if trimmed == "" { // empty comment line
@@ -203,9 +238,8 @@ func reportFile(filename string, r io.Reader) ([]*tag, error) {
 			} else if idx != -1 { // another TODO tag in same comment block
 				tags = append(tags, tt)
 				tt = &tag{
-					lineNum:  lineNum,
-					desc:     line[idx:],
-					filename: filename,
+					lineNum: lineNum,
+					desc:    line[idx:],
 				}
 			} else { // add trimmed current line to current tag
 				tt.desc += ("\n" + trimmed)

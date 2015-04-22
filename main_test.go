@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+func Test_Foo(t *testing.T) {
+	tags()
+}
+
 func Test_Basics(t *testing.T) {
 	// need this for name
 	f, err := ioutil.TempFile("", "foo")
@@ -38,10 +42,6 @@ func Test_Basics(t *testing.T) {
 	home := os.ExpandEnv("$HOME")
 
 	ts = add(ts, newTodo("bar", "go to the bar", home))
-	err = ts.do("bar")
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	ts = rm(ts, "bar")
 	if len(ts) != 1 {
@@ -52,6 +52,8 @@ func Test_Basics(t *testing.T) {
 		t.Fatalf("rm -- deleted wrong todo, expected foo, got %s", ts[0].Name)
 	}
 
+	// change the pwd
+	ts.do("foo")
 	wd, _ := os.Getwd()
 	if wd != home {
 		t.Fatalf("go: expected directory %s, got %s", home, wd)
@@ -120,36 +122,31 @@ func foobar() {
 `,
 		tags: []*tag{
 			&tag{
-				lineNum:  2,
-				desc:     "TODO: some comments thingy over here.\nSome more things todo.\nEven more things todo, wow!",
-				filename: "foo.go",
+				lineNum: 2,
+				desc:    "TODO: some comments thingy over here.\nSome more things todo.\nEven more things todo, wow!",
 			},
 			&tag{
-				lineNum:  11,
-				desc:     "TODO(batman): finish this",
-				filename: "foo.go",
+				lineNum: 11,
+				desc:    "TODO(batman): finish this",
 			},
 			&tag{
-				lineNum:  15,
-				desc:     "TODO: first",
-				filename: "foo.go",
+				lineNum: 15,
+				desc:    "TODO: first",
 			},
 			&tag{
-				lineNum:  16,
-				desc:     "TODO: second",
-				filename: "foo.go",
+				lineNum: 16,
+				desc:    "TODO: second",
 			},
 			&tag{
-				lineNum:  17,
-				desc:     "TODO(domluna): last todo",
-				filename: "foo.go",
+				lineNum: 17,
+				desc:    "TODO(domluna): last todo",
 			},
 		},
 	},
 }
 
-func Test_PendingTodo(t *testing.T) {
-	tags, err := reportFile("foo.go", strings.NewReader(tagTable[0].content))
+func Test_Tags(t *testing.T) {
+	tags, err := findTags(strings.NewReader(tagTable[0].content))
 	if err != nil {
 		t.Fatal(err)
 	}
