@@ -3,39 +3,43 @@ todos
 
 todos is a todo list for the terminal.
 
+```sh
+$ go get github.com/domluna/todos
+```
+
 ### Usage
 
 Add todos with a description and path. If the -path
 flag is not present, the current directory will be
 used. T is the name of the todo:
 ```sh
-todos -desc="write more tests" add T
+$ todos -desc="write more tests" add T
 ```
 
 Remove a todo with a name T from the list:
 ```sh
-todos rm T
+$ todos rm T
 ```
 
 List all todos:
 ```sh
-todos list
+$ todos list
 ```
 
 Show a random todo:
 ```sh
-todos rand
+$ todos rand
 ```
 
 List all the todo tags in the current directory. A tag
 is defined and either "TODO:" or "TODO(somename):"
 ```sh
-todos tags
+$ todos tags
 ```
 
 Remove all todos:
 ```sh
-todos clear
+$ todos clear
 ```
 
 ### Binaries
