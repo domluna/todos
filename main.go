@@ -1,13 +1,3 @@
-// todo
-//
-// todo add T
-// todo rm T
-// todo rand
-// todo do <name>
-// todo list
-//
-// TODO: finish report
-// TODO: think about list display in console
 package main
 
 import (
@@ -28,7 +18,30 @@ import (
 )
 
 const usageMsg = "" +
-	`Usage of todo CLI:
+	`Usage of the todos CLI:
+
+Add todos with a description and path. If the -path
+flag is not present, the current directory will be
+used. T is the name of the todo:
+	todos -desc="write more tests" add T
+
+Remove a todo with a name T from the list:
+	todos rm T
+
+List all todos:
+	todos list
+	todos list
+
+Show a random todo:
+	todos rand
+	todos rand
+
+List all the todo tags in the current directory. A tag
+is defined and either "TODO:" or "TODO(somename):"
+	todos tags
+
+Remove all todos:
+	todos clear
 `
 
 func usage() {
@@ -38,11 +51,9 @@ func usage() {
 	os.Exit(2)
 }
 
-// flags
 var (
 	todoPath = flag.String("path", "", "path of the todo")
-	desc     = flag.String("desc", "", "description of the todo")
-	longOut  = flag.Bool("long", false, "list output will be more detailed")
+	todoDesc = flag.String("desc", "", "description of the todo")
 )
 
 var todosFile = os.ExpandEnv("$HOME/.todos")
@@ -55,10 +66,84 @@ func main() {
 		usage()
 	}
 
-	// err := parseFlags()
+	err := parseFlags()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, `For usage information, run "todo -help"`)
+		os.Exit(2)
+	}
+
+	// load up the current todos
+	ts, err := loadTodos(todosFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(2)
+	}
+
+	cmd := flag.Arg(0)
+	switch cmd {
+	case "add":
+		todoName := flag.Arg(1)
+
+		var ok bool
+		ts, ok = add(ts, newTodo(todoName, *todoDesc, *todoPath))
+		if !ok {
+			fmt.Fprintf(os.Stderr, "todo with name \"%s\" already exists\n", todoName)
+		}
+	case "rm":
+		todoName := flag.Arg(1)
+
+		var ok bool
+		ts, ok = rm(ts, todoName)
+		if !ok {
+			fmt.Fprintf(os.Stderr, "no todo with name \"%s\"\n", todoName)
+		}
+	case "list":
+		ts.list()
+	case "rand":
+		if len(ts) < 1 {
+			fmt.Fprintln(os.Stderr, `no todos left, try adding one with "todo add"`)
+			os.Exit(2)
+		}
+		todo := ts.random()
+		fmt.Println(todo)
+	case "work":
+		// 	todoName := flag.Arg(1)
+		// 	err := ts.workOn(todoName)
+		// 	if err != nil {
+		// 		fmt.Fprintf(os.Stderr, "%v\n", err)
+		// 		os.Exit(2)
+		// 	}
+		//
+		// 	fmt.Fprintf(os.Stdin, "$(cd %s)", os.ExpandEnv("$HOME"))
+		fmt.Fprintln(os.Stderr, `"todo work" is currently a WIP`)
+	// 		os.Exit(2)
+	case "tags":
+		tags()
+	case "clear":
+		ts = make(todoSlice, 0)
+	case "count":
+		fmt.Fprintf(os.Stdout, "%d todo(s) left\n", len(ts))
+	default:
+		fmt.Fprintf(os.Stderr, "command \"%s\" not valid\n", cmd)
+		usage()
+	}
+
+	// save changes
+	err = saveTodos(todosFile, ts)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(2)
+	}
+
 }
 
 func parseFlags() error {
+	if *todoPath == "" {
+		dir, _ := os.Getwd()
+		*todoPath = dir
+	}
+
 	return nil
 }
 
@@ -87,38 +172,43 @@ func newTodo(name, desc, path string) *Todo {
 
 type todoSlice []*Todo
 
-func add(ts todoSlice, t *Todo) todoSlice {
+// Long form of todo
+func (t *Todo) String() string {
+	s := ""
+	layout := "Mon Jan 2 2006"
+	s = fmt.Sprintf("Name: %s\n", t.Name)
+	s += fmt.Sprintf("Created: %s\n", t.Created.Format(layout))
+	s += fmt.Sprintf("Path: %s\n", t.Path)
+	s += fmt.Sprintf("Description: %s", t.Desc)
+	return s
+}
+
+func add(ts todoSlice, t *Todo) (todoSlice, bool) {
 	for _, tt := range ts {
 		if tt.Name == t.Name {
-			return ts
+			return ts, false
 		}
 	}
-	return append(ts, t)
+	return append(ts, t), true
 
 }
 
-func rm(ts todoSlice, name string) todoSlice {
+func rm(ts todoSlice, name string) (todoSlice, bool) {
 	for i, tt := range ts {
 		if tt.Name == name {
 			// https://github.com/golang/go/wiki/SliceTricks
-			return append(ts[:i], ts[i+1:]...)
+			return append(ts[:i], ts[i+1:]...), true
 		}
 	}
-	return ts
+	return ts, false
 }
 
 // list lists the active todos.
-// TODO: this sucks right now
+// TODO: better date formatting
 func (ts todoSlice) list() {
-	fmt.Println()
 	for _, t := range ts {
-		s := fmt.Sprintf("Task: %s\n", t.Name)
-		s += fmt.Sprintf("Created: %s\n", t.Created)
-		s += fmt.Sprintf("Path: %s\n", t.Path)
-		s += fmt.Sprintf("Description: %s\n", t.Desc)
-		fmt.Print(s)
+		fmt.Printf("%s\n", t)
 	}
-	fmt.Printf("todos left: %d\n", len(ts))
 }
 
 // randomTodo picks a random todo from lists of available
@@ -132,8 +222,9 @@ func (ts todoSlice) random() *Todo {
 	return ts[ix]
 }
 
-// do changes to the directory of the todo.
-func (ts todoSlice) do(name string) error {
+// workOn changes to the directory of the todo with
+// given name.
+func (ts todoSlice) workOn(name string) error {
 	var path string
 	for _, t := range ts {
 		if t.Name == name {
@@ -142,9 +233,10 @@ func (ts todoSlice) do(name string) error {
 	}
 
 	if path == "" {
-		return errors.New("task \"%s\" not found.")
+		return errors.New(fmt.Sprintf("todo %s not found", name))
 	}
 
+	fmt.Println(path)
 	return os.Chdir(path)
 }
 

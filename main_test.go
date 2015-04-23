@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-func Test_Foo(t *testing.T) {
-	tags()
-}
+// func Test_TagsInDirectory(t *testing.T) {
+// 	tags()
+// }
 
 func Test_Basics(t *testing.T) {
 	// need this for name
@@ -28,22 +28,22 @@ func Test_Basics(t *testing.T) {
 		t.Fatalf("loadTodos() -- no file: got %s, want nil", err)
 	}
 
-	ts = rm(ts, "foo")
+	ts, _ = rm(ts, "foo")
 	if len(ts) != 0 {
 		t.Fatalf("add -- same name: expected 0 todo, got %d", len(ts))
 	}
 
-	ts = add(ts, newTodo("foo", "fooing some fools", "$HOME"))
-	ts = add(ts, newTodo("foo", "fooing some fools", "$HOME"))
+	ts, _ = add(ts, newTodo("foo", "fooing some fools", "$HOME"))
+	ts, _ = add(ts, newTodo("foo", "fooing some fools", "$HOME"))
 	if len(ts) != 1 {
 		t.Fatalf("add -- same name: expected 1 todo, got %d", len(ts))
 	}
 
 	home := os.ExpandEnv("$HOME")
 
-	ts = add(ts, newTodo("bar", "go to the bar", home))
+	ts, _ = add(ts, newTodo("bar", "go to the bar", home))
 
-	ts = rm(ts, "bar")
+	ts, _ = rm(ts, "bar")
 	if len(ts) != 1 {
 		t.Fatalf("rm: expected 2 todo, got %d", len(ts))
 	}
@@ -53,7 +53,7 @@ func Test_Basics(t *testing.T) {
 	}
 
 	// change the pwd
-	ts.do("foo")
+	ts.workOn("foo")
 	wd, _ := os.Getwd()
 	if wd != home {
 		t.Fatalf("go: expected directory %s, got %s", home, wd)
