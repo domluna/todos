@@ -98,8 +98,8 @@ func main() {
 		if !ok {
 			fmt.Fprintf(os.Stderr, "no todo with name \"%s\"\n", todoName)
 		}
-	case "list":
-		ts.list()
+	case "ls":
+		ts.ls()
 	case "rand":
 		if len(ts) < 1 {
 			fmt.Fprintln(os.Stderr, `no todos left, try adding one with "todo add"`)
@@ -205,7 +205,11 @@ func rm(ts todoSlice, name string) (todoSlice, bool) {
 
 // list lists the active todos.
 // TODO: better date formatting
-func (ts todoSlice) list() {
+func (ts todoSlice) ls() {
+	if len(ts) < 1 {
+		fmt.Println("No todos! Better find something!")
+		return
+	}
 	for _, t := range ts {
 		fmt.Printf("%s\n", t)
 	}
