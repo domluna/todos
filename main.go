@@ -20,20 +20,18 @@ import (
 const usageMsg = "" +
 	`Usage of the todos CLI:
 
-Add todos with a description and path. If the -path
-flag is not present, the current directory will be
-used. T is the name of the todo:
-	todos -desc="write more tests" add T
+Add a new todo with a description and path. If no path
+is given, the current directory will be used. T is the 
+name of the todo:
+	todos -desc="write more tests" new T
 
 Remove a todo with a name T from the list:
 	todos rm T
 
 List all todos:
-	todos list
-	todos list
+	todos ls
 
 Show a random todo:
-	todos rand
 	todos rand
 
 List all the todo tags in the current directory. A tag
@@ -82,11 +80,11 @@ func main() {
 
 	cmd := flag.Arg(0)
 	switch cmd {
-	case "add":
+	case "new":
 		todoName := flag.Arg(1)
 
 		var ok bool
-		ts, ok = add(ts, newTodo(todoName, *todoDesc, *todoPath))
+		ts, ok = new(ts, newTodo(todoName, *todoDesc, *todoPath))
 		if !ok {
 			fmt.Fprintf(os.Stderr, "todo with name \"%s\" already exists\n", todoName)
 		}
@@ -102,7 +100,7 @@ func main() {
 		ts.ls()
 	case "rand":
 		if len(ts) < 1 {
-			fmt.Fprintln(os.Stderr, `no todos left, try adding one with "todo add"`)
+			fmt.Fprintln(os.Stderr, `no todos left, try adding one with "todo new"`)
 			os.Exit(2)
 		}
 		todo := ts.random()
@@ -183,7 +181,7 @@ func (t *Todo) String() string {
 	return s
 }
 
-func add(ts todoSlice, t *Todo) (todoSlice, bool) {
+func new(ts todoSlice, t *Todo) (todoSlice, bool) {
 	for _, tt := range ts {
 		if tt.Name == t.Name {
 			return ts, false

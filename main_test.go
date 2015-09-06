@@ -33,15 +33,15 @@ func Test_Basics(t *testing.T) {
 		t.Fatalf("add -- same name: expected 0 todo, got %d", len(ts))
 	}
 
-	ts, _ = add(ts, newTodo("foo", "fooing some fools", "$HOME"))
-	ts, _ = add(ts, newTodo("foo", "fooing some fools", "$HOME"))
+	ts, _ = new(ts, newTodo("foo", "fooing some fools", "$HOME"))
+	ts, _ = new(ts, newTodo("foo", "fooing some fools", "$HOME"))
 	if len(ts) != 1 {
 		t.Fatalf("add -- same name: expected 1 todo, got %d", len(ts))
 	}
 
 	home := os.ExpandEnv("$HOME")
 
-	ts, _ = add(ts, newTodo("bar", "go to the bar", home))
+	ts, _ = new(ts, newTodo("bar", "go to the bar", home))
 
 	ts, _ = rm(ts, "bar")
 	if len(ts) != 1 {
